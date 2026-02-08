@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ epic_key }} - Summary Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+</head>
+<body>
+    <div class="report-container">
+        <header class="report-header">
+            <div class="header-nav">
+                <h1>{{ epic_key }} - {{ epic_name }} - Summary</h1>
+                <div class="header-logout">
+                    <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+                </div>
+            </div>
+            <nav class="report-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-tab">Home</a>
+                <a href="{{ url_for('jira_report') }}" class="nav-tab">Stories</a>
+                <a href="{{ url_for('qa_report') }}" class="nav-tab active">Summary</a>
+                <a href="{{ url_for('metrics_board') }}" class="nav-tab">Scorecard</a>
+                <a href="{{ url_for('visual_board') }}" class="nav-tab">Dashboard</a>
+            </nav>
+        </header>
+
+        <main class="report-content">
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <h3>Total Defects</h3>
+                    <p class="summary-number">{{ total_defects }}</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Open Defects</h3>
+                    <p class="summary-number">{{ open_defects }}</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Closed Defects</h3>
+                    <p class="summary-number">{{ closed_defects }}</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Defect Key</th>
+                            <th>Defect Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in data %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ issue.get('Key', '') }}</td>
+                            <td>{{ issue.get('Summary', '') }}</td>
+                            <td class="status-column">
+                                <span class="status-cell status-{{ issue.get('Status', '').lower().replace(' ', '-') }}">
+                                    {{ issue.get('Status', '') }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ epic_key }} - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="report-container">
+        <header class="report-header">
+            <div class="header-nav">
+                <h1>{{ epic_key }} - {{ epic_name }} - Dashboard</h1>
+                <div class="header-logout">
+                    <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+                </div>
+            </div>
+            <nav class="report-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-tab">Home</a>
+                <a href="{{ url_for('jira_report') }}" class="nav-tab">Stories</a>
+                <a href="{{ url_for('qa_report') }}" class="nav-tab">Summary</a>
+                <a href="{{ url_for('metrics_board') }}" class="nav-tab">Scorecard</a>
+                <a href="{{ url_for('visual_board') }}" class="nav-tab active">Dashboard</a>
+            </nav>
+        </header>
+
+        <main class="report-content">
+            <div class="charts-grid">
+                <!-- First Row: 5 charts -->
+                <div class="chart-container">
+                    <h3>Phase</h3>
+                    <canvas id="phaseChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Priority</h3>
+                    <div id="priorityTreemap" class="treemap-container"></div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Time</h3>
+                    <canvas id="timeChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Environment</h3>
+                    <canvas id="environmentChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Assignee</h3>
+                    <canvas id="assigneeChart"></canvas>
+                </div>
+
+                <!-- Second Row: 3 charts -->
+                <div class="chart-container">
+                    <h3>Status</h3>
+                    <canvas id="statusChart"></canvas>
+                </div>
+
+                {% if metrics %}
+                <div class="chart-container">
+                    <h3>Review vs Testing</h3>
+                    <canvas id="reviewVsTestingChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Pre vs Post Production</h3>
+                    <canvas id="preVsPostProdChart"></canvas>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Data for charts -->
+    <script type="application/json" id="chart-data">
+    {
+        "status_counts": {{ status_counts|tojson }},
+        "priority_counts": {{ priority_counts|tojson }},
+        "time_metrics": {
+            "min": {{ time_metrics.min|round(1) }},
+            "max": {{ time_metrics.max|round(1) }},
+            "avg": {{ time_metrics.avg|round(1) }}
+        },
+        "priority_counts_data": {{ priority_counts|tojson }},
+        "environment_counts": {{ environment_counts|tojson }},
+        "assignee_counts": {{ assignee_counts|tojson }},
+        "metrics": {
+            "percentage_review": {{ metrics.percentage_review|round(1) if metrics and metrics.percentage_review else 0 }},
+            "percentage_testing": {{ metrics.percentage_testing|round(1) if metrics and metrics.percentage_testing else 0 }},
+            "percentage_pre_production": {{ metrics.percentage_pre_production|round(1) if metrics and metrics.percentage_pre_production else 0 }},
+            "percentage_post_production": {{ metrics.percentage_post_production|round(1) if metrics and metrics.percentage_post_production else 0 }}
+        },
+        "total_defects": {{ total_defects }},
+        "open_defects": {{ open_defects }},
+        "closed_defects": {{ closed_defects }}
+    }
+    </script>
+
+    <script>
+        // Get data from JSON script tag
+        const chartDataElement = document.getElementById('chart-data');
+        const chartData = JSON.parse(chartDataElement.textContent);
+        
+        // Phase Chart (Pie)
+        const phaseData = chartData.status_counts;
+        new Chart(document.getElementById('phaseChart'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(phaseData),
+                datasets: [{
+                    data: Object.values(phaseData),
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+
+        // Priority Treemap
+        const priorityData = chartData.priority_counts;
+        const priorityTreemapContainer = document.getElementById('priorityTreemap');
+        
+        // Convert data to array format
+        const priorityEntries = Object.entries(priorityData).map(([label, value]) => ({
+            label: label,
+            value: value
+        }));
+        
+        // Calculate total for percentage
+        const totalPriority = priorityEntries.reduce((sum, item) => sum + item.value, 0);
+        
+        // Treemap algorithm (slice and dice layout)
+        function createTreemap(container, data, width, height) {
+            container.innerHTML = '';
+            container.style.width = width + 'px';
+            container.style.height = height + 'px';
+            
+            // Sort data by value (descending)
+            const sortedData = [...data].sort((a, b) => b.value - a.value);
+            
+            // Different colors for each priority level
+            const colorMap = {
+                'Highest': '#ef4444',  // Red
+                'High': '#f59e0b',     // Orange
+                'Medium': '#2563eb',   // Blue
+                'Low': '#10b981',      // Green
+                'Lowest': '#8b5cf6'    // Purple
+            };
+            
+            // Get color for each item, fallback to a default color
+            const getColor = (label) => {
+                return colorMap[label] || '#6b7280'; // Default gray
+            };
+            
+            // Calculate rectangles using slice and dice algorithm
+            let x = 0;
+            let y = 0;
+            let remainingWidth = width;
+            let remainingHeight = height;
+            let isVertical = width >= height; // Start with the longer dimension
+            
+            sortedData.forEach((item, index) => {
+                const itemArea = (item.value / totalPriority) * (width * height);
+                
+                let rectWidth, rectHeight, rectX, rectY;
+                
+                if (isVertical) {
+                    // Vertical slice
+                    rectHeight = remainingHeight;
+                    rectWidth = itemArea / rectHeight;
+                    rectX = x;
+                    rectY = y;
+                    x += rectWidth;
+                    remainingWidth -= rectWidth;
+                } else {
+                    // Horizontal slice
+                    rectWidth = remainingWidth;
+                    rectHeight = itemArea / rectWidth;
+                    rectX = x;
+                    rectY = y;
+                    y += rectHeight;
+                    remainingHeight -= rectHeight;
+                }
+                
+                // Create rectangle element
+                const rectDiv = document.createElement('div');
+                rectDiv.className = 'treemap-rect';
+                rectDiv.style.position = 'absolute';
+                rectDiv.style.left = rectX + 'px';
+                rectDiv.style.top = rectY + 'px';
+                rectDiv.style.width = Math.max(rectWidth, 0) + 'px';
+                rectDiv.style.height = Math.max(rectHeight, 0) + 'px';
+                rectDiv.style.backgroundColor = getColor(item.label);
+                rectDiv.style.border = '2px solid #ffffff';
+                rectDiv.style.boxSizing = 'border-box';
+                rectDiv.style.display = 'flex';
+                rectDiv.style.flexDirection = 'column';
+                rectDiv.style.justifyContent = 'center';
+                rectDiv.style.alignItems = 'center';
+                rectDiv.style.color = '#ffffff';
+                rectDiv.style.textAlign = 'center';
+                rectDiv.style.padding = '4px';
+                rectDiv.style.cursor = 'pointer';
+                rectDiv.style.overflow = 'hidden';
+                
+                const minSize = Math.min(rectWidth, rectHeight);
+                const fontSize = Math.max(10, Math.min(16, minSize / 8));
+                
+                const labelDiv = document.createElement('div');
+                labelDiv.textContent = item.label;
+                labelDiv.style.fontSize = fontSize + 'px';
+                labelDiv.style.fontWeight = '600';
+                labelDiv.style.marginBottom = '2px';
+                labelDiv.style.lineHeight = '1.2';
+                
+                const valueDiv = document.createElement('div');
+                valueDiv.textContent = item.value;
+                valueDiv.style.fontSize = (fontSize * 1.2) + 'px';
+                valueDiv.style.fontWeight = '900';
+                valueDiv.style.lineHeight = '1.2';
+                valueDiv.style.fontFamily = 'Arial, sans-serif';
+                
+                rectDiv.appendChild(labelDiv);
+                rectDiv.appendChild(valueDiv);
+                container.appendChild(rectDiv);
+                
+                // Switch direction for next rectangle
+                isVertical = !isVertical;
+            });
+        }
+        
+        // Initialize treemap when container is ready
+        if (priorityTreemapContainer && priorityEntries.length > 0) {
+            const initTreemap = () => {
+                const containerWidth = priorityTreemapContainer.parentElement.clientWidth - 48 || 400;
+                const containerHeight = 300;
+                createTreemap(priorityTreemapContainer, priorityEntries, containerWidth, containerHeight);
+            };
+            
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initTreemap);
+            } else {
+                setTimeout(initTreemap, 100);
+            }
+            
+            // Update on resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(initTreemap, 250);
+            });
+        }
+
+        // Time Chart (Bar)
+        const timeMin = chartData.time_metrics.min;
+        const timeMax = chartData.time_metrics.max;
+        const timeAvg = chartData.time_metrics.avg;
+        console.log('Time metrics:', { min: timeMin, max: timeMax, avg: timeAvg });
+        const timeData = {
+            labels: ['Minimum', 'Maximum', 'Average'],
+            datasets: [{
+                label: 'Hours',
+                data: [timeMin, timeMax, timeAvg],
+                backgroundColor: '#10b981',
+                barThickness: 40
+            }]
+        };
+        new Chart(document.getElementById('timeChart'), {
+            type: 'bar',
+            data: timeData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 1,
+                            stepSize: 1,
+                            callback: function(value) {
+                                return value.toFixed(1);
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            padding: 10
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Hours: ' + context.parsed.y.toFixed(1);
+                            }
+                        }
+                    },
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+
+        // Environment Chart (Doughnut)
+        const environmentData = chartData.environment_counts;
+        new Chart(document.getElementById('environmentChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(environmentData),
+                datasets: [{
+                    data: Object.values(environmentData),
+                    backgroundColor: ['#3b82f6', '#ef4444', '#10b981']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+
+        // Assignee Chart (Pie)
+        const assigneeData = chartData.assignee_counts;
+        new Chart(document.getElementById('assigneeChart'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(assigneeData),
+                datasets: [{
+                    data: Object.values(assigneeData),
+                    backgroundColor: ['#3b82f6', '#ef4444', '#10b981']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+
+        // Status Chart (Horizontal Bar)
+        const statusData = {
+            labels: ['Total', 'Open', 'Closed'],
+            datasets: [
+                {
+                    label: 'Total',
+                    data: [chartData.total_defects, 0, 0],
+                    backgroundColor: '#2563eb',
+                    barThickness: 15
+                },
+                {
+                    label: 'Open',
+                    data: [0, chartData.open_defects, 0],
+                    backgroundColor: '#ef4444',
+                    barThickness: 15
+                },
+                {
+                    label: 'Closed',
+                    data: [0, 0, chartData.closed_defects],
+                    backgroundColor: '#10b981',
+                    barThickness: 15
+                }
+            ]
+        };
+        new Chart(document.getElementById('statusChart'), {
+            type: 'bar',
+            data: statusData,
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        stacked: false
+                    },
+                    y: {
+                        stacked: false,
+                        ticks: {
+                            padding: 15
+                        }
+                    }
+                },
+                layout: {
+                    padding: {
+                        left: 20
+                    }
+                }
+            }
+        });
+
+        // Review vs Testing Chart
+        if (chartData.metrics && chartData.metrics.percentage_review !== undefined) {
+            const reviewVsTestingData = {
+                labels: ['Reviews', 'Testing'],
+                datasets: [{
+                    data: [
+                        chartData.metrics.percentage_review,
+                        chartData.metrics.percentage_testing
+                    ],
+                    backgroundColor: ['#10b981', '#ef4444']
+                }]
+            };
+        new Chart(document.getElementById('reviewVsTestingChart'), {
+            type: 'doughnut',
+            data: reviewVsTestingData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+
+            // Pre vs Post Production Chart
+            const preVsPostProdData = {
+                labels: ['Pre-production', 'Post-production'],
+                datasets: [{
+                    data: [
+                        chartData.metrics.percentage_pre_production,
+                        chartData.metrics.percentage_post_production
+                    ],
+                    backgroundColor: ['#10b981', '#ef4444']
+                }]
+            };
+            new Chart(document.getElementById('preVsPostProdChart'), {
+                type: 'doughnut',
+                data: preVsPostProdData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+

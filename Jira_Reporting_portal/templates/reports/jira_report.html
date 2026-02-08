@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ epic_key }} - Stories</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+</head>
+<body>
+    <div class="report-container">
+        <header class="report-header">
+            <div class="header-nav">
+                <h1>{{ epic_key }} - {{ epic_name }} - Stories</h1>
+                <div class="header-logout">
+                    <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+                </div>
+            </div>
+            <nav class="report-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-tab">Home</a>
+                <a href="{{ url_for('jira_report') }}" class="nav-tab active">Stories</a>
+                <a href="{{ url_for('qa_report') }}" class="nav-tab">Summary</a>
+                <a href="{{ url_for('metrics_board') }}" class="nav-tab">Scorecard</a>
+                <a href="{{ url_for('visual_board') }}" class="nav-tab">Dashboard</a>
+            </nav>
+        </header>
+
+        <main class="report-content">
+            <div class="table-container">
+                <table class="report-table" id="reportTable">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Key</span>
+                                    <button class="filter-btn" data-column="0" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Environment</span>
+                                    <button class="filter-btn" data-column="1" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Summary</span>
+                                    <button class="filter-btn" data-column="2" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Priority</span>
+                                    <button class="filter-btn" data-column="3" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Issue Type</span>
+                                    <button class="filter-btn" data-column="4" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Reporter</span>
+                                    <button class="filter-btn" data-column="5" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Assignee</span>
+                                    <button class="filter-btn" data-column="6" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Status</span>
+                                    <button class="filter-btn" data-column="7" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Created Date</span>
+                                    <button class="filter-btn" data-column="8" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Resolution Date</span>
+                                    <button class="filter-btn" data-column="9" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Last Status Change</span>
+                                    <button class="filter-btn" data-column="10" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th class="assignee-history-header">
+                                <div class="filter-header">
+                                    <span>Assignee History</span>
+                                    <button class="filter-btn" data-column="11" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Duration (HH:MM)</span>
+                                    <button class="filter-btn" data-column="12" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Phase Detected</span>
+                                    <button class="filter-btn" data-column="13" title="Filter">▼</button>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="filter-header">
+                                    <span>Phase Injected</span>
+                                    <button class="filter-btn" data-column="14" title="Filter">▼</button>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in data %}
+                        <tr>
+                            <td>{{ issue.get('Key', '') }}</td>
+                            <td>{{ issue.get('Environment', '') }}</td>
+                            <td>{{ issue.get('Summary', '') }}</td>
+                            <td>{{ issue.get('Priority', '') }}</td>
+                            <td>{{ issue.get('Issue Type', '') }}</td>
+                            <td>{{ issue.get('Reporter', '') }}</td>
+                            <td>{{ issue.get('Assignee', '') }}</td>
+                            <td class="status-column">
+                                <span class="status-cell status-{{ issue.get('Status', '').lower().replace(' ', '-') }}">
+                                    {{ issue.get('Status', '') }}
+                                </span>
+                            </td>
+                            <td>{{ issue.get('Created Date', '') }}</td>
+                            <td>{{ issue.get('Resolution Date', '') }}</td>
+                            <td>{{ issue.get('Last Status Change', '') }}</td>
+                            <td class="assignee-history-cell" data-full-text="{{ issue.get('Assignee History', '') }}">
+                                <span class="assignee-history-text">{{ issue.get('Assignee History', '') }}</span>
+                            </td>
+                            <td>{{ issue.get('Duration (HH:MM)', '') }}</td>
+                            <td>{{ issue.get('Phase Detected', '') }}</td>
+                            <td>{{ issue.get('Phase Injected', '') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    <script>
+        // Excel-style filter functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('reportTable');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const tbody = table.querySelector('tbody');
+            let activeFilterMenu = null;
+            
+            // Collect unique values for each column
+            function getUniqueValues(columnIndex) {
+                const values = new Set();
+                const rows = tbody.querySelectorAll('tr');
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > columnIndex) {
+                        let cellText = '';
+                        if (columnIndex === 7) {
+                            // Handle status column
+                            const statusCell = cells[columnIndex].querySelector('.status-cell');
+                            cellText = statusCell ? statusCell.textContent.trim() : '';
+                        } else {
+                            cellText = cells[columnIndex].textContent.trim();
+                        }
+                        if (cellText) {
+                            values.add(cellText);
+                        }
+                    }
+                });
+                
+                return Array.from(values).sort();
+            }
+            
+            // Create filter dropdown menu
+            function createFilterMenu(columnIndex, button) {
+                // Close any existing menu
+                if (activeFilterMenu) {
+                    activeFilterMenu.remove();
+                }
+                
+                const uniqueValues = getUniqueValues(columnIndex);
+                const menu = document.createElement('div');
+                menu.className = 'filter-menu';
+                menu.style.position = 'absolute';
+                menu.style.width = 'auto';
+                menu.style.whiteSpace = 'nowrap';
+                
+                const rect = button.getBoundingClientRect();
+                menu.style.top = (rect.bottom + window.scrollY) + 'px';
+                menu.style.left = (rect.left + window.scrollX) + 'px';
+                menu.style.zIndex = '1000';
+                
+                // Search input
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.className = 'filter-menu-search';
+                searchInput.placeholder = 'Search...';
+                menu.appendChild(searchInput);
+                
+                // Select All checkbox
+                const selectAllDiv = document.createElement('div');
+                selectAllDiv.className = 'filter-menu-item';
+                const selectAllCheckbox = document.createElement('input');
+                selectAllCheckbox.type = 'checkbox';
+                selectAllCheckbox.id = `select-all-${columnIndex}`;
+                selectAllCheckbox.checked = true;
+                const selectAllLabel = document.createElement('label');
+                selectAllLabel.htmlFor = `select-all-${columnIndex}`;
+                selectAllLabel.textContent = '(Select All)';
+                selectAllDiv.appendChild(selectAllCheckbox);
+                selectAllDiv.appendChild(selectAllLabel);
+                menu.appendChild(selectAllDiv);
+                
+                // Divider
+                const divider = document.createElement('div');
+                divider.className = 'filter-menu-divider';
+                menu.appendChild(divider);
+                
+                // Checkboxes container
+                const checkboxesContainer = document.createElement('div');
+                checkboxesContainer.className = 'filter-menu-checkboxes';
+                checkboxesContainer.style.maxHeight = '200px';
+                checkboxesContainer.style.overflowY = 'auto';
+                checkboxesContainer.style.whiteSpace = 'nowrap';
+                
+                const checkboxes = {};
+                uniqueValues.forEach(value => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'filter-menu-item';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `filter-${columnIndex}-${value.replace(/\s+/g, '-')}`;
+                    checkbox.value = value;
+                    checkbox.checked = true;
+                    checkbox.dataset.column = columnIndex;
+                    checkboxes[value] = checkbox;
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = checkbox.id;
+                    label.textContent = value;
+                    
+                    itemDiv.appendChild(checkbox);
+                    itemDiv.appendChild(label);
+                    checkboxesContainer.appendChild(itemDiv);
+                });
+                
+                menu.appendChild(checkboxesContainer);
+                
+                // Buttons
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'filter-menu-buttons';
+                
+                const okButton = document.createElement('button');
+                okButton.className = 'filter-menu-btn filter-menu-ok';
+                okButton.textContent = 'OK';
+                
+                const clearButton = document.createElement('button');
+                clearButton.className = 'filter-menu-btn filter-menu-clear';
+                clearButton.textContent = 'Clear';
+                
+                buttonsDiv.appendChild(okButton);
+                buttonsDiv.appendChild(clearButton);
+                menu.appendChild(buttonsDiv);
+                
+                document.body.appendChild(menu);
+                activeFilterMenu = menu;
+                
+                // Auto-size menu based on content width - ensure no wrapping
+                setTimeout(() => {
+                    // Force layout calculation
+                    menu.style.display = 'block';
+                    const searchWidth = searchInput.offsetWidth;
+                    let maxItemWidth = 0;
+                    
+                    checkboxesContainer.querySelectorAll('.filter-menu-item').forEach(item => {
+                        const itemWidth = item.scrollWidth;
+                        if (itemWidth > maxItemWidth) {
+                            maxItemWidth = itemWidth;
+                        }
+                    });
+                    
+                    const buttonsWidth = menu.querySelector('.filter-menu-buttons').offsetWidth;
+                    const menuWidth = Math.max(maxItemWidth, searchWidth, buttonsWidth, 200) + 16; // Add padding
+                    menu.style.width = menuWidth + 'px';
+                    menu.style.minWidth = menuWidth + 'px';
+                }, 0);
+                
+                // Search functionality
+                searchInput.addEventListener('input', function() {
+                    const searchValue = this.value.toLowerCase();
+                    checkboxesContainer.querySelectorAll('.filter-menu-item').forEach(item => {
+                        const label = item.querySelector('label');
+                        if (label.textContent.toLowerCase().includes(searchValue)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+                
+                // Select All functionality
+                selectAllCheckbox.addEventListener('change', function() {
+                    checkboxesContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        if (cb.id !== selectAllCheckbox.id) {
+                            cb.checked = this.checked;
+                        }
+                    });
+                });
+                
+                // OK button - apply filter
+                okButton.addEventListener('click', function() {
+                    const selectedValues = new Set();
+                    checkboxesContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                        selectedValues.add(cb.value);
+                    });
+                    
+                    applyFilter(columnIndex, selectedValues);
+                    menu.remove();
+                    activeFilterMenu = null;
+                });
+                
+                // Clear button - remove filter
+                clearButton.addEventListener('click', function() {
+                    applyFilter(columnIndex, null);
+                    menu.remove();
+                    activeFilterMenu = null;
+                });
+                
+                // Close menu when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', function closeMenu(e) {
+                        if (!menu.contains(e.target) && e.target !== button) {
+                            menu.remove();
+                            activeFilterMenu = null;
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    });
+                }, 0);
+            }
+            
+            // Apply filter
+            function applyFilter(columnIndex, selectedValues) {
+                const rows = tbody.querySelectorAll('tr');
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > columnIndex) {
+                        let cellText = '';
+                        if (columnIndex === 7) {
+                            const statusCell = cells[columnIndex].querySelector('.status-cell');
+                            cellText = statusCell ? statusCell.textContent.trim() : '';
+                        } else {
+                            cellText = cells[columnIndex].textContent.trim();
+                        }
+                        
+                        if (selectedValues === null || selectedValues.has(cellText)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    }
+                });
+            }
+            
+            // Add click handlers to filter buttons
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const columnIndex = parseInt(this.getAttribute('data-column'));
+                    createFilterMenu(columnIndex, this);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
